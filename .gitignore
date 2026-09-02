@@ -1,0 +1,10 @@
+.vs/
+.idea/
+.vscode/
+
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+.directory
+._*
