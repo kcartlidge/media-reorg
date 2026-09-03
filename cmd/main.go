@@ -18,5 +18,7 @@ func main() {
 	fmt.Println()
 	fmt.Println("Folder:", folder)
 	fmt.Println()
+	scan(folder)
+	fmt.Println()
 	fmt.Println()
 }
