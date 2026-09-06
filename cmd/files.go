@@ -37,15 +37,15 @@ type entry struct {
 // folders maps auto-incrementing ids to folder paths
 var folders map[int]string
 
-// entries maps file hashes to scanned files
-var entries map[string]entry
+// entries maps file hashes to one or more scanned files
+var entries map[string][]entry
 
 // scan walks the source folder and populates the folders and entries maps
 func scan(source string) {
 
 	// prepare folder and file maps
 	folders = make(map[int]string)
-	entries = make(map[string]entry)
+	entries = make(map[string][]entry)
 	ids := make(map[string]int)
 	next := 1
 	root := filepath.Base(source)
@@ -77,6 +77,11 @@ func scan(source string) {
 			return nil
 		}
 
+		// ignore OS metadata files
+		if skipJunk(d.Name()) {
+			return nil
+		}
+
 		// split the filename
 		info, err := d.Info()
 		check(err)
@@ -89,7 +94,8 @@ func scan(source string) {
 
 		// record the file
 		ts := info.ModTime()
-		entries[fileHash(path)] = entry{
+		hash := fileHash(path)
+		entries[hash] = append(entries[hash], entry{
 			folder:    ids[filepath.Dir(path)],
 			name:      base,
 			ext:       ext,
@@ -98,7 +104,7 @@ func scan(source string) {
 			size:      info.Size(),
 			year:      ts.Format("2006"),
 			month:     ts.Format("01"),
-		}
+		})
 		return nil
 	})
 	check(err)
@@ -145,4 +151,13 @@ func hasSubfolder(path string) bool {
 		}
 	}
 	return false
+}
+
+// skipJunk reports whether name is OS metadata that should not be organised
+func skipJunk(name string) bool {
+	switch strings.ToLower(name) {
+	case ".ds_store", "thumbs.db", "ehthumbs.db", "desktop.ini", ".directory":
+		return true
+	}
+	return strings.HasPrefix(name, "._")
 }

@@ -22,6 +22,9 @@ func main() {
 
 	// scan the source folder
 	scan(folder)
+
+	// move files into year/month folders
+	processEntries(folder)
 	fmt.Println()
 	fmt.Println()
 }
