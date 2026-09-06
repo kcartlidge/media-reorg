@@ -161,3 +161,74 @@ func skipJunk(name string) bool {
 	}
 	return strings.HasPrefix(name, "._")
 }
+
+// clearup removes empty folders and folders that only contain junk files
+func clearup(source string) {
+	walkClear(source, source)
+}
+
+// walkClear visits folders depth-first and removes empty or junk-only ones
+func walkClear(path, source string) {
+
+	// clear child folders first
+	items, err := os.ReadDir(path)
+	check(err)
+	for _, item := range items {
+		if item.IsDir() {
+			walkClear(filepath.Join(path, item.Name()), source)
+		}
+	}
+
+	// never remove the source folder itself
+	if path == source {
+		return
+	}
+
+	// remove this folder if it is empty or only junk
+	items, err = os.ReadDir(path)
+	check(err)
+	if !emptyOrJunkOnly(items) {
+		return
+	}
+	removePath(path)
+}
+
+// emptyOrJunkOnly reports whether items has no real files or folders
+func emptyOrJunkOnly(items []os.DirEntry) bool {
+	for _, item := range items {
+		if item.IsDir() || !skipJunk(item.Name()) {
+			return false
+		}
+	}
+	return true
+}
+
+// removePath starts a delete and waits until it is gone, errors, or times out
+func removePath(path string) {
+
+	// start the removal
+	done := make(chan error, 1)
+	go func() {
+		done <- os.RemoveAll(path)
+	}()
+
+	// wait until the path is gone, an error occurs, or a timeout
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		select {
+		case err := <-done:
+			check(err)
+		default:
+		}
+
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			return
+		}
+
+		if time.Now().After(deadline) {
+			check(fmt.Errorf("%s is stuck", path))
+		}
+
+		time.Sleep(200 * time.Millisecond)
+	}
+}
