@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -26,23 +26,57 @@ func processEntries(source string) {
 			from := filepath.Join(source, rel, name)
 
 			// build the destination path
-			destDir := filepath.Join(source, item.year, item.month)
-			if item.kind == Other {
-				destDir = filepath.Join(source, "issues", "others", item.year, item.month)
+			to := destPath(source, item, name)
+			if err := placeFile(from, to); err != nil {
+				parkIssue(source, from, name, item, err)
 			}
-			to := filepath.Join(destDir, name)
-
-			// move the file
-			check(os.MkdirAll(destDir, 0755))
-			moveFile(from, to)
 		}
 	}
 }
 
+// destPath is the year/month path for a scanned file
+func destPath(source string, item entry, name string) string {
+	if item.issue != "" {
+		return filepath.Join(source, "issues", "errors", slugify(item.issue), item.year, item.month, name)
+	}
+	if item.kind == Other {
+		return filepath.Join(source, "issues", "other_filetypes", item.year, item.month, name)
+	}
+	return filepath.Join(source, item.year, item.month, name)
+}
+
+// placeFile creates the destination folder and moves the file
+func placeFile(from, to string) error {
+	if err := os.MkdirAll(filepath.Dir(to), 0755); err != nil {
+		return errors.New(msgFailedToCreateFolder)
+	}
+	return moveFile(from, to)
+}
+
+// parkIssue moves a failed file into issues/errors
+func parkIssue(source, from, name string, item entry, err error) {
+
+	// already heading for an errors folder, so stop
+	to := filepath.Join(source, "issues", "errors", slugify(err.Error()), item.year, item.month, name)
+	if to == destPath(source, item, name) {
+		check(err)
+	}
+
+	check(placeFile(from, to))
+}
+
 // moveFile starts a rename and waits until it appears, errors, or times out
-func moveFile(from, to string) {
+func moveFile(from, to string) error {
 	if from == to {
-		return
+		return nil
+	}
+
+	// nothing to move if the source has already gone
+	if _, err := os.Stat(from); os.IsNotExist(err) {
+		if _, destErr := os.Stat(to); destErr == nil {
+			return nil
+		}
+		return errors.New(msgFailedToMoveFile)
 	}
 
 	// start the move
@@ -56,18 +90,20 @@ func moveFile(from, to string) {
 	for {
 		select {
 		case err := <-done:
-			check(err)
+			if err != nil {
+				return errors.New(msgFailedToMoveFile)
+			}
 		default:
 		}
 
 		_, destErr := os.Stat(to)
 		_, srcErr := os.Stat(from)
 		if destErr == nil && os.IsNotExist(srcErr) {
-			return
+			return nil
 		}
 
 		if time.Now().After(deadline) {
-			check(fmt.Errorf("%s is stuck", from))
+			return errors.New(msgMoveIsStuck)
 		}
 
 		time.Sleep(200 * time.Millisecond)

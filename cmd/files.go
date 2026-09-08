@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -32,6 +33,7 @@ type entry struct {
 	size      int64
 	year      string
 	month     string
+	issue     string
 }
 
 // folders maps auto-incrementing ids to folder paths
@@ -52,9 +54,16 @@ func scan(source string) {
 
 	// walk every folder and file
 	err := filepath.WalkDir(source, func(path string, d fs.DirEntry, err error) error {
-		check(err)
+		if err != nil {
+			if d != nil && !d.IsDir() && !skipJunk(d.Name()) {
+				addFile(path, d, ids)
+			}
+			return nil
+		}
 		rel, err := filepath.Rel(source, path)
-		check(err)
+		if err != nil {
+			return nil
+		}
 
 		if d.IsDir() {
 
@@ -82,47 +91,72 @@ func scan(source string) {
 			return nil
 		}
 
-		// split the filename
-		info, err := d.Info()
-		check(err)
-		filename := d.Name()
-		ext := filepath.Ext(filename)
-		base := strings.TrimSuffix(filename, ext)
-		if ext != "" {
-			ext = ext[1:]
-		}
-
-		// record the file
-		ts := info.ModTime()
-		hash := fileHash(path)
-		entries[hash] = append(entries[hash], entry{
-			folder:    ids[filepath.Dir(path)],
-			name:      base,
-			ext:       ext,
-			kind:      kindFromExt(ext),
-			timestamp: ts,
-			size:      info.Size(),
-			year:      ts.Format("2006"),
-			month:     ts.Format("01"),
-		})
+		addFile(path, d, ids)
 		return nil
 	})
 	check(err)
 }
 
+// addFile records a scanned file, marking read failures as issues
+func addFile(path string, d fs.DirEntry, ids map[string]int) {
+
+	// split the filename
+	filename := d.Name()
+	ext := filepath.Ext(filename)
+	base := strings.TrimSuffix(filename, ext)
+	if ext != "" {
+		ext = ext[1:]
+	}
+
+	// read timestamps and size
+	issue := ""
+	ts := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	var size int64
+	info, err := d.Info()
+	if err != nil {
+		issue = msgFailedToReadFile
+	} else {
+		ts = info.ModTime()
+		size = info.Size()
+	}
+
+	// hash the contents
+	hash, err := fileHash(path)
+	if err != nil {
+		issue = msgFailedToReadFile
+		hash = path
+	}
+
+	entries[hash] = append(entries[hash], entry{
+		folder:    ids[filepath.Dir(path)],
+		name:      base,
+		ext:       ext,
+		kind:      kindFromExt(ext),
+		timestamp: ts,
+		size:      size,
+		year:      ts.Format("2006"),
+		month:     ts.Format("01"),
+		issue:     issue,
+	})
+}
+
 // fileHash returns the SHA-256 hex digest of the file at path
-func fileHash(path string) string {
+func fileHash(path string) (string, error) {
 
 	// open the file
 	file, err := os.Open(path)
-	check(err)
+	if err != nil {
+		return "", errors.New(msgFailedToReadFile)
+	}
 	defer file.Close()
 
 	// hash the contents
 	hash := sha256.New()
 	_, err = io.Copy(hash, file)
-	check(err)
-	return hex.EncodeToString(hash.Sum(nil))
+	if err != nil {
+		return "", errors.New(msgFailedToReadFile)
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 // kindFromExt returns Image, Movie, or Other for a file extension

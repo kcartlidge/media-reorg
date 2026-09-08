@@ -59,7 +59,7 @@ issues
       2026/
         06/
           grapes.jpeg
-  others/
+  other_filetypes/
     2025/
       02/
         thing.txt
@@ -69,4 +69,4 @@ issues
 - The top level `issues` folder contains things to look at manually
   - The `duplicates` are the *later* copies of files whose earliest instance was *kept* in the main dated folders, with an incrementing suffix (you can safely remove the `duplicates` folder unless you're curious, given that the earliest is in the main collection anyway)
   - The `errors` structure will be populated with errored files, grouped by error then by year/month
-  - The `others` structure will be populated with just like the main folders but with non-media files
+  - The `other_filetypes` structure will be populated with just like the main folders but with non-media files

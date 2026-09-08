@@ -3,6 +3,15 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
+	"unicode"
+)
+
+const (
+	msgFailedToReadFile     = "failed to read file"
+	msgFailedToMoveFile     = "failed to move file"
+	msgMoveIsStuck          = "move is stuck"
+	msgFailedToCreateFolder = "failed to create folder"
 )
 
 // check prints an error message and exits the program if the error is not nil
@@ -18,4 +27,22 @@ func check(err error) {
 		fmt.Println()
 		os.Exit(1)
 	}
+}
+
+// slugify turns a simple error message into a folder name
+func slugify(msg string) string {
+	var b strings.Builder
+	underscore := false
+	for _, r := range strings.ToLower(msg) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+			underscore = false
+			continue
+		}
+		if !underscore {
+			b.WriteByte('_')
+			underscore = true
+		}
+	}
+	return strings.Trim(b.String(), "_")
 }
