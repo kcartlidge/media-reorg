@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -15,7 +16,13 @@ func processEntries(source string) {
 
 	// move each scanned file
 	for _, group := range entries {
-		for _, item := range group {
+
+		// keep the earliest; later copies go to duplicates
+		sort.SliceStable(group, func(i, j int) bool {
+			return group[i].timestamp.Before(group[j].timestamp)
+		})
+
+		for i, item := range group {
 
 			// build the current file path
 			rel, _ := filepath.Rel(root, folders[item.folder])
@@ -26,7 +33,7 @@ func processEntries(source string) {
 			from := filepath.Join(source, rel, name)
 
 			// build the destination path
-			to := destPath(source, item, name)
+			to := destPath(source, item, name, i > 0)
 			if err := placeFile(from, to); err != nil {
 				parkIssue(source, from, name, item, err)
 			}
@@ -35,9 +42,12 @@ func processEntries(source string) {
 }
 
 // destPath is the year/month path for a scanned file
-func destPath(source string, item entry, name string) string {
+func destPath(source string, item entry, name string, duplicate bool) string {
 	if item.issue != "" {
 		return filepath.Join(source, "issues", "errors", slugify(item.issue), item.year, item.month, name)
+	}
+	if duplicate {
+		return filepath.Join(source, "issues", "duplicates", item.year, item.month, name)
 	}
 	if item.kind == Other {
 		return filepath.Join(source, "issues", "other_filetypes", item.year, item.month, name)
@@ -58,7 +68,7 @@ func parkIssue(source, from, name string, item entry, err error) {
 
 	// already heading for an errors folder, so stop
 	to := filepath.Join(source, "issues", "errors", slugify(err.Error()), item.year, item.month, name)
-	if to == destPath(source, item, name) {
+	if to == destPath(source, item, name, false) {
 		check(err)
 	}
 
