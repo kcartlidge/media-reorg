@@ -2,7 +2,7 @@
 
 Command line tool to reorganise a collection of pictures and movies into a set of folders based on year and month.  Also tracks and handles duplicates and other files.
 
-Organises by year/month in the form `2026/09`.  Files are *moved* into that structure inside the source folder so they retain their original timestamps.  For duplicates (by hash and size) only the earliest is moved into the expected structure.
+Organises by year/month in the form `2026/09`.  Files are *moved* into that structure inside the source folder so they retain their original timestamps.  For duplicates (by hash) only the earliest is moved into the expected structure.
 
 Remaining duplicates, files with read errors, and files of other filetypes are moved into parallel folder trees for manual checks.
 
@@ -50,10 +50,10 @@ issues
   duplicates/
     2026/
       06/
+        bananas.jpg
         bananas_1.jpg
-        bananas_2.jpg
       12/
-        apples_1.mp4
+        apples.mp4
   errors/
     failed_to_move_file/
       2026/
@@ -67,6 +67,10 @@ issues
 
 - The top level dated folders contain the media files moved successfully
 - The top level `issues` folder contains things to look at manually
-  - The `duplicates` are the *later* copies of files whose earliest instance was *kept* in the main dated folders, with an incrementing suffix (you can safely remove the `duplicates` folder unless you're curious, given that the earliest is in the main collection anyway)
+  - The `duplicates` are the *later* copies of files whose earliest instance was *kept* in the main dated folders, keeping their original names unless that name is already taken in the destination folder, in which case an incrementing suffix is added (you can safely remove the `duplicates` folder unless you're curious, given that the earliest is in the main collection anyway)
   - The `errors` structure will be populated with errored files, grouped by error then by year/month
   - The `other_filetypes` structure will be populated with just like the main folders but with non-media files
+
+OS metadata files such as `.DS_Store`, `Thumbs.db`, `desktop.ini`, and AppleDouble `._*` files are skipped entirely and are not organised.
+
+After the files have been moved, empty folders and folders that contain only those junk files are removed.  The source folder itself is left in place.
