@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -90,10 +92,14 @@ func moveFile(from, to string) error {
 	}
 
 	// start the move
+	named := make(chan string, 1)
 	done := make(chan error, 1)
 	go func() {
-		done <- os.Rename(from, to)
+		dest := freePath(to)
+		named <- dest
+		done <- os.Rename(from, dest)
 	}()
+	to = <-named
 
 	// wait until this file has moved, an error occurs, or a timeout
 	deadline := time.Now().Add(20 * time.Second)
@@ -117,5 +123,49 @@ func moveFile(from, to string) error {
 		}
 
 		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// freePath returns to, or to with _N before the extension if to already exists
+func freePath(to string) string {
+
+	// keep the original name when it is free
+	if _, err := os.Stat(to); os.IsNotExist(err) {
+		return to
+	}
+
+	// find the highest existing _N variant in the same folder
+	dir := filepath.Dir(to)
+	base := filepath.Base(to)
+	ext := filepath.Ext(base)
+	name := strings.TrimSuffix(base, ext)
+	next := 1
+	prefix := name + "_"
+	items, err := os.ReadDir(dir)
+	if err == nil {
+		for _, item := range items {
+			fn := item.Name()
+			if !strings.HasPrefix(fn, prefix) {
+				continue
+			}
+			if ext != "" && !strings.HasSuffix(fn, ext) {
+				continue
+			}
+			mid := strings.TrimSuffix(strings.TrimPrefix(fn, prefix), ext)
+			n, convErr := strconv.Atoi(mid)
+			if convErr != nil || n < next {
+				continue
+			}
+			next = n + 1
+		}
+	}
+
+	// use the next free numbered name
+	for {
+		candidate := filepath.Join(dir, name+"_"+strconv.Itoa(next)+ext)
+		if _, err := os.Stat(candidate); os.IsNotExist(err) {
+			return candidate
+		}
+		next++
 	}
 }
