@@ -46,7 +46,7 @@ Your folder will end up looking like this:
   09/
     apples.mp4
     oranges.png
-issues
+_rm_issues
   duplicates/
     2026/
       06/
@@ -66,11 +66,14 @@ issues
 ```
 
 - The top level dated folders contain the media files moved successfully
-- The top level `issues` folder contains things to look at manually
+- The top level `_rm_issues` folder contains things to look at manually
   - The `duplicates` are the *later* copies of files whose earliest instance was *kept* in the main dated folders, keeping their original names unless that name is already taken in the destination folder, in which case an incrementing suffix is added (you can safely remove the `duplicates` folder unless you're curious, given that the earliest is in the main collection anyway)
   - The `errors` structure will be populated with errored files, grouped by error then by year/month
   - The `other_filetypes` structure will be populated with just like the main folders but with non-media files
+- In reality the issues folder usually lists first; it's last here just for clarity
 
 OS metadata files such as `.DS_Store`, `Thumbs.db`, `desktop.ini`, and AppleDouble `._*` files are skipped entirely and are not organised.
 
 After the files have been moved, empty folders and folders that contain only those junk files are removed.  The source folder itself is left in place.
+
+The `_rm_issues` folder is skipped when scanning (the number of files is reported).  To reprocess any of those files, move them out of that folder tree first.

@@ -52,6 +52,7 @@ func scan(source string) {
 	ids := make(map[string]int)
 	next := 1
 	root := filepath.Base(source)
+	issueSkipped := 0
 
 	// walk every folder and file
 	err := filepath.WalkDir(source, func(path string, d fs.DirEntry, err error) error {
@@ -63,6 +64,15 @@ func scan(source string) {
 		}
 		rel, err := filepath.Rel(source, path)
 		if err != nil {
+			return nil
+		}
+
+		// skip the issue folder from a previous run
+		if underIssueFolder(rel) {
+			if d.IsDir() && rel == issueFolder {
+				issueSkipped = countFilesInTree(path)
+				return fs.SkipDir
+			}
 			return nil
 		}
 
@@ -96,6 +106,32 @@ func scan(source string) {
 		return nil
 	})
 	check(err)
+
+	// report skipped issue files
+	if issueSkipped > 0 {
+		fmt.Println("Skipped", issueSkipped, "files in", issueFolder+".")
+	}
+}
+
+// underIssueFolder reports whether rel is inside the issue folder tree
+func underIssueFolder(rel string) bool {
+	return rel == issueFolder || strings.HasPrefix(rel, issueFolder+string(filepath.Separator))
+}
+
+// countFilesInTree counts non-junk files under root
+func countFilesInTree(root string) int {
+	n := 0
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !d.IsDir() && !skipJunk(d.Name()) {
+			n++
+		}
+		return nil
+	})
+	check(err)
+	return n
 }
 
 // addFile records a scanned file, marking read failures as issues

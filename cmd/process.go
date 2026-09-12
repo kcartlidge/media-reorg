@@ -41,22 +41,22 @@ func processEntries(source string) {
 // destPath is the year/month path for a scanned file
 func destPath(source string, item entry, name string, duplicate bool) string {
 	if item.issue != "" {
-		return filepath.Join(source, "issues", "errors", slugify(item.issue), item.year, item.month, name)
+		return filepath.Join(source, issueFolder, "errors", slugify(item.issue), item.year, item.month, name)
 	}
 	if duplicate {
-		return filepath.Join(source, "issues", "duplicates", item.year, item.month, name)
+		return filepath.Join(source, issueFolder, "duplicates", item.year, item.month, name)
 	}
 	if item.kind == Other {
-		return filepath.Join(source, "issues", "other_filetypes", item.year, item.month, name)
+		return filepath.Join(source, issueFolder, "other_filetypes", item.year, item.month, name)
 	}
 	return filepath.Join(source, item.year, item.month, name)
 }
 
-// parkIssue moves a failed file into issues/errors
+// parkIssue moves a failed file into the issues/errors tree
 func parkIssue(source, from, name string, item entry, err error) {
 
 	// already heading for an errors folder, so stop
-	to := filepath.Join(source, "issues", "errors", slugify(err.Error()), item.year, item.month, name)
+	to := filepath.Join(source, issueFolder, "errors", slugify(err.Error()), item.year, item.month, name)
 	if to == destPath(source, item, name, false) {
 		check(err)
 	}
