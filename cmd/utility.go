@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -12,6 +13,7 @@ const (
 	msgFailedToMoveFile     = "failed to move file"
 	msgMoveIsStuck          = "move is stuck"
 	msgFailedToCreateFolder = "failed to create folder"
+	pollInterval            = 20 * time.Millisecond
 )
 
 // check prints an error message and exits the program if the error is not nil
