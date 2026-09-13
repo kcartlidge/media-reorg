@@ -241,6 +241,14 @@ func placeFile(from, to string) error {
 	return moveFile(from, to)
 }
 
+// placeCopy creates the destination folder and copies the file
+func placeCopy(from, to string) error {
+	if err := os.MkdirAll(filepath.Dir(to), 0755); err != nil {
+		return errors.New(msgFailedToCreateFolder)
+	}
+	return copyFile(from, to)
+}
+
 // moveFile starts a rename and waits until it appears, errors, or times out
 func moveFile(from, to string) error {
 	if from == to {
@@ -288,6 +296,67 @@ func moveFile(from, to string) error {
 
 		time.Sleep(pollInterval)
 	}
+}
+
+// copyFile starts a copy and waits until it appears, errors, or times out
+func copyFile(from, to string) error {
+	if from == to {
+		return nil
+	}
+
+	// start the copy
+	named := make(chan string, 1)
+	done := make(chan error, 1)
+	go func() {
+		dest := freePath(to)
+		named <- dest
+		done <- writeCopy(from, dest)
+	}()
+	to = <-named
+
+	// wait until the copy finishes, an error occurs, or a timeout
+	deadline := time.Now().Add(20 * time.Second)
+	finished := false
+	for {
+		select {
+		case err := <-done:
+			if err != nil {
+				return errors.New(msgFailedToCopyFile)
+			}
+			finished = true
+		default:
+		}
+
+		if finished {
+			if _, err := os.Stat(to); err == nil {
+				return nil
+			}
+		}
+
+		if time.Now().After(deadline) {
+			return errors.New(msgCopyIsStuck)
+		}
+
+		time.Sleep(pollInterval)
+	}
+}
+
+// writeCopy copies file contents from from to to
+func writeCopy(from, to string) error {
+	src, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.Create(to)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	_, err = io.Copy(dst, src)
+	return err
 }
 
 // freePath returns to, or to with _N before the extension if to already exists

@@ -12,6 +12,8 @@ const (
 	msgFailedToReadFile     = "failed to read file"
 	msgFailedToMoveFile     = "failed to move file"
 	msgMoveIsStuck          = "move is stuck"
+	msgFailedToCopyFile     = "failed to copy file"
+	msgCopyIsStuck          = "copy is stuck"
 	msgFailedToCreateFolder = "failed to create folder"
 	issueFolder             = "_rm_issues"
 	pollInterval            = 20 * time.Millisecond

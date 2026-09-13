@@ -48,12 +48,11 @@ Your folder will end up looking like this:
     oranges.png
 _rm_issues
   duplicates/
-    2026/
-      06/
+    a1b2c3d4.../
+      album/
         bananas.jpg
-        bananas_1.jpg
-      12/
-        apples.mp4
+      backup/
+        bananas.jpg
   errors/
     failed_to_move_file/
       2026/
@@ -67,7 +66,7 @@ _rm_issues
 
 - The top level dated folders contain the media files moved successfully
 - The top level `_rm_issues` folder contains things to look at manually
-  - The `duplicates` are the *later* copies of files whose earliest instance was *kept* in the main dated folders, keeping their original names unless that name is already taken in the destination folder, in which case an incrementing suffix is added (you can safely remove the `duplicates` folder unless you're curious, given that the earliest is in the main collection anyway)
+  - The `duplicates` tree groups by content hash: later copies are *moved* there under their original paths relative to the source folder, and a *copy* of the earliest is placed the same way for reference (the earliest itself remains in the main dated folders).  Name collisions in a destination folder get an incrementing suffix.  You can safely remove the `duplicates` folder unless you're curious, given that the earliest is in the main collection anyway
   - The `errors` structure will be populated with errored files, grouped by error then by year/month
   - The `other_filetypes` structure will be populated with just like the main folders but with non-media files
 - In reality the issues folder usually lists first; it's last here just for clarity
