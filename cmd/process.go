@@ -19,6 +19,8 @@ func processEntries(source string) {
 			return group[i].timestamp.Before(group[j].timestamp)
 		})
 
+		earliestPath := ""
+
 		for i, item := range group {
 
 			// build the current file path
@@ -33,9 +35,10 @@ func processEntries(source string) {
 			if len(group) > 1 {
 				dup := duplicatePath(source, hash, rel, name)
 				if i == 0 {
-					check(placeCopy(from, dup))
+					_, err := placeCopy(from, dup)
+					check(err)
 				} else {
-					if err := placeFile(from, dup); err != nil {
+					if _, err := placeFile(from, dup); err != nil {
 						parkIssue(source, from, name, item, err)
 					}
 					continue
@@ -44,9 +47,18 @@ func processEntries(source string) {
 
 			// earliest (or only) file goes to the normal destination
 			to := destPath(source, item, name)
-			if err := placeFile(from, to); err != nil {
+			path, err := placeFile(from, to)
+			if err != nil {
 				parkIssue(source, from, name, item, err)
+				continue
 			}
+			if len(group) > 1 && i == 0 {
+				earliestPath = path
+			}
+		}
+
+		if len(group) > 1 && earliestPath != "" {
+			writeDuplicateReadme(source, hash, earliestPath)
 		}
 	}
 }
@@ -76,5 +88,6 @@ func parkIssue(source, from, name string, item entry, err error) {
 		check(err)
 	}
 
-	check(placeFile(from, to))
+	_, placeErr := placeFile(from, to)
+	check(placeErr)
 }

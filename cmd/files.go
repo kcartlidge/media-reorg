@@ -234,33 +234,33 @@ func skipJunk(name string) bool {
 }
 
 // placeFile creates the destination folder and moves the file
-func placeFile(from, to string) error {
+func placeFile(from, to string) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(to), 0755); err != nil {
-		return errors.New(msgFailedToCreateFolder)
+		return "", errors.New(msgFailedToCreateFolder)
 	}
 	return moveFile(from, to)
 }
 
 // placeCopy creates the destination folder and copies the file
-func placeCopy(from, to string) error {
+func placeCopy(from, to string) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(to), 0755); err != nil {
-		return errors.New(msgFailedToCreateFolder)
+		return "", errors.New(msgFailedToCreateFolder)
 	}
 	return copyFile(from, to)
 }
 
 // moveFile starts a rename and waits until it appears, errors, or times out
-func moveFile(from, to string) error {
+func moveFile(from, to string) (string, error) {
 	if from == to {
-		return nil
+		return to, nil
 	}
 
 	// nothing to move if the source has already gone
 	if _, err := os.Stat(from); os.IsNotExist(err) {
 		if _, destErr := os.Stat(to); destErr == nil {
-			return nil
+			return to, nil
 		}
-		return errors.New(msgFailedToMoveFile)
+		return "", errors.New(msgFailedToMoveFile)
 	}
 
 	// start the move
@@ -279,7 +279,7 @@ func moveFile(from, to string) error {
 		select {
 		case err := <-done:
 			if err != nil {
-				return errors.New(msgFailedToMoveFile)
+				return "", errors.New(msgFailedToMoveFile)
 			}
 		default:
 		}
@@ -287,11 +287,11 @@ func moveFile(from, to string) error {
 		_, destErr := os.Stat(to)
 		_, srcErr := os.Stat(from)
 		if destErr == nil && os.IsNotExist(srcErr) {
-			return nil
+			return to, nil
 		}
 
 		if time.Now().After(deadline) {
-			return errors.New(msgMoveIsStuck)
+			return "", errors.New(msgMoveIsStuck)
 		}
 
 		time.Sleep(pollInterval)
@@ -299,9 +299,9 @@ func moveFile(from, to string) error {
 }
 
 // copyFile starts a copy and waits until it appears, errors, or times out
-func copyFile(from, to string) error {
+func copyFile(from, to string) (string, error) {
 	if from == to {
-		return nil
+		return to, nil
 	}
 
 	// start the copy
@@ -321,7 +321,7 @@ func copyFile(from, to string) error {
 		select {
 		case err := <-done:
 			if err != nil {
-				return errors.New(msgFailedToCopyFile)
+				return "", errors.New(msgFailedToCopyFile)
 			}
 			finished = true
 		default:
@@ -329,16 +329,31 @@ func copyFile(from, to string) error {
 
 		if finished {
 			if _, err := os.Stat(to); err == nil {
-				return nil
+				return to, nil
 			}
 		}
 
 		if time.Now().After(deadline) {
-			return errors.New(msgCopyIsStuck)
+			return "", errors.New(msgCopyIsStuck)
 		}
 
 		time.Sleep(pollInterval)
 	}
+}
+
+// writeDuplicateReadme adds a README.txt to a duplicates hash folder
+func writeDuplicateReadme(source, hash, earliest string) {
+
+	// build the relative path to the earliest file
+	rel, err := filepath.Rel(source, earliest)
+	check(err)
+
+	// write the readme
+	text := "All matching files are in this 'duplicates' subfolder.\n" +
+		"When checked, you can freely delete it as the earliest was also placed in the dated folders as:\n" +
+		rel + "\n"
+	path := filepath.Join(source, issueFolder, "duplicates", hash, "README.txt")
+	check(os.WriteFile(path, []byte(text), 0644))
 }
 
 // writeCopy copies file contents from from to to
