@@ -17,6 +17,7 @@ const (
 	msgFailedToCreateFolder = "failed to create folder"
 	issueFolder             = "_rm_issues"
 	pollInterval            = 20 * time.Millisecond
+	pollTimeout             = 20 * time.Second
 )
 
 // check prints an error message and exits the program if the error is not nil

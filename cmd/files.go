@@ -274,28 +274,15 @@ func moveFile(from, to string) (string, error) {
 	to = <-named
 
 	// wait until this file has moved, an error occurs, or a timeout
-	deadline := time.Now().Add(20 * time.Second)
-	for {
-		select {
-		case err := <-done:
-			if err != nil {
-				return "", errors.New(msgFailedToMoveFile)
-			}
-		default:
-		}
-
+	err := waitUntil(done, func(workDone bool) bool {
 		_, destErr := os.Stat(to)
 		_, srcErr := os.Stat(from)
-		if destErr == nil && os.IsNotExist(srcErr) {
-			return to, nil
-		}
-
-		if time.Now().After(deadline) {
-			return "", errors.New(msgMoveIsStuck)
-		}
-
-		time.Sleep(pollInterval)
+		return destErr == nil && os.IsNotExist(srcErr)
+	}, errors.New(msgMoveIsStuck), errors.New(msgFailedToMoveFile))
+	if err != nil {
+		return "", err
 	}
+	return to, nil
 }
 
 // copyFile starts a copy and waits until it appears, errors, or times out
@@ -315,26 +302,42 @@ func copyFile(from, to string) (string, error) {
 	to = <-named
 
 	// wait until the copy finishes, an error occurs, or a timeout
-	deadline := time.Now().Add(20 * time.Second)
-	finished := false
+	err := waitUntil(done, func(workDone bool) bool {
+		if !workDone {
+			return false
+		}
+		_, statErr := os.Stat(to)
+		return statErr == nil
+	}, errors.New(msgCopyIsStuck), errors.New(msgFailedToCopyFile))
+	if err != nil {
+		return "", err
+	}
+	return to, nil
+}
+
+// waitUntil polls until ready, the background work errors, or a timeout
+func waitUntil(done <-chan error, ready func(workDone bool) bool, stuck, fail error) error {
+	workDone := false
+	deadline := time.Now().Add(pollTimeout)
 	for {
 		select {
 		case err := <-done:
 			if err != nil {
-				return "", errors.New(msgFailedToCopyFile)
+				if fail != nil {
+					return fail
+				}
+				return err
 			}
-			finished = true
+			workDone = true
 		default:
 		}
 
-		if finished {
-			if _, err := os.Stat(to); err == nil {
-				return to, nil
-			}
+		if ready(workDone) {
+			return nil
 		}
 
 		if time.Now().After(deadline) {
-			return "", errors.New(msgCopyIsStuck)
+			return stuck
 		}
 
 		time.Sleep(pollInterval)
@@ -469,22 +472,8 @@ func removePath(path string) {
 	}()
 
 	// wait until the path is gone, an error occurs, or a timeout
-	deadline := time.Now().Add(20 * time.Second)
-	for {
-		select {
-		case err := <-done:
-			check(err)
-		default:
-		}
-
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			return
-		}
-
-		if time.Now().After(deadline) {
-			check(fmt.Errorf("%s is stuck", path))
-		}
-
-		time.Sleep(pollInterval)
-	}
+	check(waitUntil(done, func(workDone bool) bool {
+		_, err := os.Stat(path)
+		return os.IsNotExist(err)
+	}, fmt.Errorf("%s is stuck", path), nil))
 }
