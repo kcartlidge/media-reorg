@@ -17,11 +17,35 @@ Remaining duplicates, files with read errors, and files of other filetypes are m
 
 ## Usage
 
+To reorganise your media folder, the simplest option is to do the following:
+
 ``` bash
 cd <repo>
 cd cmd
 go run . <folder>
 ```
+
+### Optional AI renaming
+
+If you want to use an *optional* AI model API to examine image contents and rename the files you can specify the needed config on the command line:
+
+``` bash
+cd <repo>
+cd cmd
+go run . <folder> [<url> <model> [<api-key>]]
+```
+
+For example: `~/my-images http://127.0.0.1:1234 google/gemma-4-e4b`
+
+The square brackets show that if you specify the `url` (an Open AI compatible API) you also need to specify the `model` and an optional `api-key`.  The API key is optional because *it's strongly recommended you run a local model as the model will see all your images*.
+
+*Running AI against each image will notably lengthen the time taken.  Normal file reorganisation is completed before the (optional) AI work starts.*
+
+Install LM Studio (or Ollama etc) then use it to download the *Gemma 4 E4B* model and run it locally.  It *doesn't* need a graphics card to run, though will obviously be faster with one.  Other models may work fine, but Gemma 4 E4B is small, reliable, fast (vs others on the same hardware), accepts images, and also runs okay on a CPU-only machine.
+
+LM Studio will tell you the API endpoint and exact model name.  You only need the API key if you are connecting to a cloud model.  If you are still unsure about exact model names run *media-reorg* with random text and it will list the names of those that the API makes available.
+
+With this in place when you run *media-reorg* it will move all the files around as expected but then also feed each *image* file in turn to the API and ask it for a new filename based on the contents (for example `34EC32.png` might become `dog-in-field-sunny-day.png`).  If the current filename doesn't 'seem' random to the model it will leave the name alone.
 
 ## Process
 
