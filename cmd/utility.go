@@ -37,18 +37,28 @@ func check(err error) {
 
 // slugify turns a simple error message into a folder name
 func slugify(msg string) string {
+	return slugifyWith(msg, '_')
+}
+
+// slugifyFilename turns suggested text into a hyphenated filename stem
+func slugifyFilename(msg string) string {
+	return slugifyWith(msg, '-')
+}
+
+// slugifyWith turns text into a slug using sep between word pieces
+func slugifyWith(msg string, sep byte) string {
 	var b strings.Builder
-	underscore := false
+	pending := false
 	for _, r := range strings.ToLower(msg) {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {
 			b.WriteRune(r)
-			underscore = false
+			pending = false
 			continue
 		}
-		if !underscore {
-			b.WriteByte('_')
-			underscore = true
+		if !pending {
+			b.WriteByte(sep)
+			pending = true
 		}
 	}
-	return strings.Trim(b.String(), "_")
+	return strings.Trim(b.String(), string(sep))
 }

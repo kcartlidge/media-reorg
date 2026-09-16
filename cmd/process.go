@@ -1,15 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
-// processEntries moves scanned files into year/month folders
-func processEntries(source string) {
+// processEntries moves scanned files into year/month folders.
+// It returns paths that landed in the main dated folders.
+func processEntries(source string) []string {
 
 	// source folder name prefix used in the folders map
 	root := filepath.Base(source)
+	var organised []string
 
 	// move each scanned file
 	for hash, group := range entries {
@@ -52,6 +56,9 @@ func processEntries(source string) {
 				parkIssue(source, from, name, item, err)
 				continue
 			}
+			if item.issue == "" && item.kind == Image {
+				organised = append(organised, path)
+			}
 			if len(group) > 1 && i == 0 {
 				earliestPath = path
 			}
@@ -61,6 +68,36 @@ func processEntries(source string) {
 			writeDuplicateReadme(source, hash, earliestPath)
 		}
 	}
+
+	return organised
+}
+
+// renameViaAI asks whether a filename looks intentional; random names are replaced
+// using a vision prompt and renameToSlug. Chat failures are returned to the caller.
+func renameViaAI(baseURL, model, apiKey, path string) error {
+
+	filename := filepath.Base(path)
+	prompt := fmt.Sprintf(
+		`Does the filename %q look intentional (eg descriptive, a person's name, a place etc), or random/generated/sequential?  Reply with only "yes" if intentional or "no" if random.`,
+		filename,
+	)
+	reply, err := askChat(baseURL, apiKey, model, prompt)
+	if err != nil {
+		return err
+	}
+
+	reply = strings.ToLower(strings.TrimSpace(reply))
+	if strings.HasPrefix(reply, "yes") {
+		return nil
+	}
+
+	// ask the model for a short descriptive stem based on the image
+	namePrompt := `Look at this image and reply with only a filename between 1 and 50 characters based on the nouns of any major objects, creatures, features, or landmarks (for example cat-grass-sunny or 3-people-christmas-tree). Do not include an extension or explanation.`
+	suggested, err := askChatImage(baseURL, apiKey, model, namePrompt, path)
+	if err != nil {
+		return err
+	}
+	return renameToSlug(path, suggested)
 }
 
 // destPath is the year/month path for a scanned file

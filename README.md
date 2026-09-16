@@ -1,6 +1,6 @@
 # media-reorg
 
-Command line tool to reorganise a collection of pictures and movies into a set of folders based on year and month.  Also tracks and handles duplicates and other files.
+Command line tool to reorganise a collection of pictures and movies into a set of folders based on year and month.  Also tracks and handles duplicates and other files.  Optionally connects to (ideally local) AI to rename images according to their content.
 
 Organises by year/month in the form `2026/09`.  Files are *moved* into that structure inside the source folder so they retain their original timestamps.  For duplicates (by hash) only the earliest is moved into the expected structure.
 
@@ -27,7 +27,11 @@ go run . <folder>
 
 ### Optional AI renaming
 
-If you want to use an *optional* AI model API to examine image contents and rename the files you can specify the needed config on the command line:
+This is a feature that uses an AI (ideally locally as it 'sees' your images) to rename any files that appear to be generically with more relevant filenames. For example it might change `IMG00034.PNG` to `chicken-tomato-pasta-salad.png` if that image contains a picture of ready-meal salad.
+
+If you use a model like Gemma 4 E4B then in less than a second or two on an M4 MacBook Pro 16GB with LM Studio it will assess the image, *including reading any text* (eg labels), and rename the file.
+
+To use the *optional* AI model API to examine image contents and rename the files you specify the needed config on the command line:
 
 ``` bash
 cd <repo>

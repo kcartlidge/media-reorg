@@ -57,12 +57,44 @@ func main() {
 	// move files into year/month folders
 	fmt.Println()
 	fmt.Println("Organising.")
-	processEntries(folder)
+	organised := processEntries(folder)
 
 	// remove empty and junk-only folders
 	fmt.Println()
 	fmt.Println("Cleaning up.")
 	clearup(folder)
+
+	// optional AI pass over filenames in the main dated folders
+	if useLLM {
+		fmt.Println()
+		fmt.Println("Checking filenames with AI.")
+		total := len(organised)
+		failures := 0
+		fmt.Print("0%")
+		lastShown := 0
+		for i, path := range organised {
+			err := renameViaAI(url, model, apiKey, path)
+			if err != nil {
+				if isChatFailure(err) && !isFatalChat(err) {
+					failures++
+				} else {
+					check(err)
+				}
+			}
+			pct := ((i + 1) * 100) / total
+			for next := lastShown + 10; next <= pct && next < 100; next += 10 {
+				fmt.Printf("  %d%%", next)
+				lastShown = next
+			}
+		}
+		fmt.Println("  100%")
+		if failures > 0 {
+			fmt.Println("AI failures:", failures)
+		}
+	}
+
+	fmt.Println()
+	fmt.Println("Done.")
 	fmt.Println()
 	fmt.Println()
 }

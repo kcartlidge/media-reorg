@@ -421,6 +421,34 @@ func freePath(to string) string {
 	}
 }
 
+// renameToSlug slugifies suggested and renames path, adding a numeric suffix on collision
+func renameToSlug(path, suggested string) error {
+
+	// take the first line and drop any extension the model may have added
+	suggested = strings.TrimSpace(suggested)
+	if i := strings.IndexByte(suggested, '\n'); i >= 0 {
+		suggested = suggested[:i]
+	}
+	suggested = strings.Trim(suggested, " `\"'")
+	suggested = strings.TrimSuffix(suggested, filepath.Ext(suggested))
+
+	slug := slugifyFilename(suggested)
+	if slug == "" {
+		return nil
+	}
+	if len(slug) > 50 {
+		slug = strings.Trim(slug[:50], "-")
+	}
+	if slug == "" {
+		return nil
+	}
+
+	ext := filepath.Ext(path)
+	to := filepath.Join(filepath.Dir(path), slug+ext)
+	_, err := moveFile(path, to)
+	return err
+}
+
 // clearup removes empty folders and folders that only contain junk files
 func clearup(source string) {
 	walkClear(source, source)
