@@ -1,0 +1,1 @@
+Does the filename %q look intentional (eg descriptive, a person's name, a place etc), or does it look random/generated/sequential?  Reply with only "yes" if intentional or "no" if random.

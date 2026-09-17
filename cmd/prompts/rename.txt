@@ -1,0 +1,6 @@
+- Look at this image and reply with a short title between 1 and 70 characters based on the contents
+- Include nouns of any major objects, creatures, features, or landmarks, and any major actions or events (for example 'cat, grass, river, sunny day' or 'family, presents, christmas tree')
+- Reply only with the title, and do not include an explanation or any extra details
+- While the proposed title is too long, rephrase it to prioritise the main subjects/themes of the image in a shorter way until it fits
+- Prefix with `drawing, ` if it is clearly not a photo
+- Prefix with `unfocused, ` it is out of focus

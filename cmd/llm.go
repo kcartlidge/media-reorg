@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,16 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+//go:embed prompts/*.txt
+var promptFS embed.FS
+
+// loadPrompt returns a trimmed prompt from the embedded prompts folder
+func loadPrompt(name string) string {
+	data, err := promptFS.ReadFile("prompts/" + name)
+	check(err)
+	return strings.TrimSpace(string(data))
+}
 
 // chatError marks a chat API failure; Fatal means stop the run
 type chatError struct {

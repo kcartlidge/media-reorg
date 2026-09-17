@@ -67,30 +67,41 @@ func main() {
 	// optional AI pass over filenames in the main dated folders
 	if useLLM {
 		fmt.Println()
-		fmt.Println("Checking filenames with AI.")
 		total := len(organised)
+		fmt.Println("Image files:", total)
+		renamed := 0
 		failures := 0
-		fmt.Print("0%")
-		lastShown := 0
+		fmt.Print("0")
+		early := []int{10, 25, 50}
+		earlyIdx := 0
+		nextHundred := 100
 		for i, path := range organised {
-			err := renameViaAI(url, model, apiKey, path)
+			did, err := renameViaAI(url, model, apiKey, path)
 			if err != nil {
 				if isChatFailure(err) && !isFatalChat(err) {
 					failures++
+					parkAIFailure(path)
 				} else {
 					check(err)
 				}
+			} else if did {
+				renamed++
 			}
-			pct := ((i + 1) * 100) / total
-			for next := lastShown + 10; next <= pct && next < 100; next += 10 {
-				fmt.Printf("  %d%%", next)
-				lastShown = next
+			n := i + 1
+			for earlyIdx < len(early) && n >= early[earlyIdx] {
+				fmt.Printf("  %d", early[earlyIdx])
+				earlyIdx++
+			}
+			for n >= nextHundred {
+				fmt.Printf("  %d", nextHundred)
+				nextHundred += 100
 			}
 		}
-		fmt.Println("  100%")
-		if failures > 0 {
-			fmt.Println("AI failures:", failures)
-		}
+		fmt.Println()
+		fmt.Println()
+		fmt.Println("Image files:", total)
+		fmt.Println("Renamed via AI:", renamed)
+		fmt.Println("AI failures:", failures)
 	}
 
 	fmt.Println()

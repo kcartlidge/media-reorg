@@ -1,6 +1,6 @@
 # media-reorg
 
-Command line tool to reorganise a collection of pictures and movies into a set of folders based on year and month.  Also tracks and handles duplicates and other files.  Optionally connects to (ideally local) AI to rename images according to their content.
+Command line tool to reorganise a collection of pictures and movies into a set of folders based on year and month.  Also tracks and handles duplicates and other files.  Optionally connects to (ideally local) AI to rename images according to their content (image recognition).
 
 Organises by year/month in the form `2026/09`.  Files are *moved* into that structure inside the source folder so they retain their original timestamps.  For duplicates (by hash) only the earliest is moved into the expected structure.
 
@@ -30,6 +30,8 @@ go run . <folder>
 This is a feature that uses an AI (ideally locally as it 'sees' your images) to rename any files that appear to be generically with more relevant filenames. For example it might change `IMG00034.PNG` to `chicken-tomato-pasta-salad.png` if that image contains a picture of ready-meal salad.
 
 If you use a model like Gemma 4 E4B then in less than a second or two on an M4 MacBook Pro 16GB with LM Studio it will assess the image, *including reading any text* (eg labels), and rename the file.
+
+*Whilst each run checks all the files, even those that may have been renamed, it first looks at the existing filename to see if it appears to already be descriptive as opposed to general.  The image recognition only kicks in if the filename does not appear to be descriptive.  It's therefore quicker the next time around as many image recognition attempts will be skipped (as an example a run that took 2m58s first time was completed in 25s on a re-run).*
 
 To use the *optional* AI model API to examine image contents and rename the files you specify the needed config on the command line:
 
@@ -75,6 +77,10 @@ Your folder will end up looking like this:
     apples.mp4
     oranges.png
 _rm_issues
+  ai-failures/
+    2026/
+      09/
+        IMG_0042.jpg
   duplicates/
     a1b2c3d4.../
       album/
@@ -96,6 +102,7 @@ _rm_issues
 - The top level `_rm_issues` folder contains things to look at manually
   - The `duplicates` tree groups by content hash: later copies are *moved* there under their original paths relative to the source folder, and a *copy* of the earliest is placed the same way for reference (the earliest itself remains in the main dated folders).  Name collisions in a destination folder get an incrementing suffix.  You can safely remove the `duplicates` folder unless you're curious, given that the earliest is in the main collection anyway
   - The `errors` structure will be populated with errored files, grouped by error then by year/month
+  - The `ai-failures` structure holds images the optional AI pass could not process, grouped by year/month
   - The `other_filetypes` structure will be populated with just like the main folders but with non-media files
 - In reality the issues folder usually lists first; it's last here just for clarity
 

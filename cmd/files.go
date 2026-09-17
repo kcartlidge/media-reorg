@@ -421,8 +421,9 @@ func freePath(to string) string {
 	}
 }
 
-// renameToSlug slugifies suggested and renames path, adding a numeric suffix on collision
-func renameToSlug(path, suggested string) error {
+// renameToSlug slugifies suggested and renames path, adding a numeric suffix on collision.
+// The bool is true when the file was renamed.
+func renameToSlug(path, suggested string) (bool, error) {
 
 	// take the first line and drop any extension the model may have added
 	suggested = strings.TrimSpace(suggested)
@@ -434,19 +435,27 @@ func renameToSlug(path, suggested string) error {
 
 	slug := slugifyFilename(suggested)
 	if slug == "" {
-		return nil
+		return false, nil
 	}
 	if len(slug) > 50 {
 		slug = strings.Trim(slug[:50], "-")
 	}
 	if slug == "" {
-		return nil
+		return false, nil
 	}
 
 	ext := filepath.Ext(path)
+	stem := strings.TrimSuffix(filepath.Base(path), ext)
+	if slug == stem {
+		return false, nil
+	}
+
 	to := filepath.Join(filepath.Dir(path), slug+ext)
-	_, err := moveFile(path, to)
-	return err
+	newPath, err := moveFile(path, to)
+	if err != nil {
+		return false, err
+	}
+	return newPath != path, nil
 }
 
 // clearup removes empty folders and folders that only contain junk files
