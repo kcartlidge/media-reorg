@@ -29,11 +29,12 @@ func processEntries(source string) []string {
 
 			// build the current file path
 			rel, _ := filepath.Rel(root, folders[item.folder])
-			name := item.name
+			origName := item.name
 			if item.ext != "" {
-				name += "." + item.ext
+				origName += "." + item.ext
 			}
-			from := filepath.Join(source, rel, name)
+			from := filepath.Join(source, rel, origName)
+			name := withDatePrefix(origName, item.timestamp)
 
 			// duplicate groups: mirror under _rm_issues/duplicates/<hash>
 			if len(group) > 1 {

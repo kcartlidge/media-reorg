@@ -450,9 +450,16 @@ func renameToSlug(path, suggested string) (bool, error) {
 	}
 
 	ext := filepath.Ext(path)
-	stem := strings.TrimSuffix(filepath.Base(path), ext)
+	base := strings.TrimSuffix(filepath.Base(path), ext)
+	datePrefix, stem, hasDate := splitDatePrefix(base)
+	if !hasDate {
+		stem = base
+	}
 	if slug == stem {
 		return false, nil
+	}
+	if hasDate {
+		slug = datePrefix + slug
 	}
 
 	to := filepath.Join(filepath.Dir(path), slug+ext)
