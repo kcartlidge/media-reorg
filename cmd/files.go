@@ -157,6 +157,11 @@ func addFile(path string, d fs.DirEntry, ids map[string]int) {
 		size = info.Size()
 	}
 
+	// prefer embedded capture time for jpeg/png when available
+	if t, ok := imageCaptureTime(path, ext); ok {
+		ts = t
+	}
+
 	// hash the contents
 	hash, err := fileHash(path)
 	if err != nil {
