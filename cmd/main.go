@@ -15,7 +15,7 @@ func main() {
 
 	fmt.Println()
 	fmt.Println("Folder:", opts.Folder)
-	if opts.UseLLM {
+	if opts.Action == "rename" {
 		fmt.Println()
 		fmt.Println("Using an Open AI compatible API to rename files:")
 		fmt.Println("     URL =", opts.URL)
@@ -50,20 +50,20 @@ func main() {
 	fmt.Println()
 	scan(opts.Folder)
 
-	// move files into year/month folders
-	fmt.Println()
-	fmt.Println("Organising.")
-	organised := processEntries(opts.Folder)
-
-	// remove empty and junk-only folders
-	fmt.Println()
-	fmt.Println("Cleaning up.")
-	clearup(opts.Folder)
-
-	// optional AI pass over filenames in the main dated folders
-	if opts.UseLLM {
+	switch opts.Action {
+	case "rearrange":
 		fmt.Println()
-		total := len(organised)
+		fmt.Println("Organising.")
+		processEntries(opts.Folder)
+
+		fmt.Println()
+		fmt.Println("Cleaning up.")
+		clearup(opts.Folder)
+
+	case "rename":
+		images := scannedImages(opts.Folder)
+		fmt.Println()
+		total := len(images)
 		fmt.Println("Image files:", total)
 		renamed := 0
 		failures := 0
@@ -71,12 +71,12 @@ func main() {
 		early := []int{10, 25, 50}
 		earlyIdx := 0
 		nextHundred := 100
-		for i, path := range organised {
+		for i, path := range images {
 			did, err := renameViaAI(opts.URL, opts.Model, opts.APIKey, path)
 			if err != nil {
 				if isChatFailure(err) && !isFatalChat(err) {
 					failures++
-					parkAIFailure(path)
+					parkAIFailure(opts.Folder, path)
 				} else {
 					check(err)
 				}
@@ -98,6 +98,12 @@ func main() {
 		fmt.Println("Image files:", total)
 		fmt.Println("Renamed via AI:", renamed)
 		fmt.Println("AI failures:", failures)
+
+		if failures > 0 {
+			fmt.Println()
+			fmt.Println("Cleaning up.")
+			clearup(opts.Folder)
+		}
 	}
 
 	fmt.Println()

@@ -67,10 +67,10 @@ func scan(source string) {
 			return nil
 		}
 
-		// skip the issue folder from a previous run
+		// skip the issue folder from a previous run (and a legacy name)
 		if underIssueFolder(rel) {
-			if d.IsDir() && rel == issueFolder {
-				issueSkipped = countFilesInTree(path)
+			if d.IsDir() && (rel == issueFolder || rel == legacyIssueFolder) {
+				issueSkipped += countFilesInTree(path)
 				return fs.SkipDir
 			}
 			return nil
@@ -113,9 +113,14 @@ func scan(source string) {
 	}
 }
 
-// underIssueFolder reports whether rel is inside the issue folder tree
+// underIssueFolder reports whether rel is inside an issues folder tree
 func underIssueFolder(rel string) bool {
-	return rel == issueFolder || strings.HasPrefix(rel, issueFolder+string(filepath.Separator))
+	return isIssueTree(rel, issueFolder) || isIssueTree(rel, legacyIssueFolder)
+}
+
+// isIssueTree reports whether rel is name or under name/
+func isIssueTree(rel, name string) bool {
+	return rel == name || strings.HasPrefix(rel, name+string(filepath.Separator))
 }
 
 // countFilesInTree counts non-junk files under root

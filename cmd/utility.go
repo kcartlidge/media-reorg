@@ -15,7 +15,8 @@ const (
 	msgFailedToCopyFile     = "failed to copy file"
 	msgCopyIsStuck          = "copy is stuck"
 	msgFailedToCreateFolder = "failed to create folder"
-	issueFolder             = "_rm_issues"
+	issueFolder             = "_mr_issues"
+	legacyIssueFolder       = "_rm_issues"
 	pollInterval            = 20 * time.Millisecond
 	pollTimeout             = 20 * time.Second
 )

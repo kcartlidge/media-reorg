@@ -2,18 +2,18 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 // processEntries moves scanned files into year/month folders.
-// It returns paths that landed in the main dated folders.
-func processEntries(source string) []string {
+func processEntries(source string) {
 
 	// source folder name prefix used in the folders map
 	root := filepath.Base(source)
-	var organised []string
 
 	// move each scanned file
 	for hash, group := range entries {
@@ -36,7 +36,7 @@ func processEntries(source string) []string {
 			from := filepath.Join(source, rel, origName)
 			name := withDatePrefix(origName, item.timestamp)
 
-			// duplicate groups: mirror under _rm_issues/duplicates/<hash>
+			// duplicate groups: mirror under _mr_issues/duplicates/<hash>
 			if len(group) > 1 {
 				dup := duplicatePath(source, hash, rel, name)
 				if i == 0 {
@@ -57,9 +57,6 @@ func processEntries(source string) []string {
 				parkIssue(source, from, name, item, err)
 				continue
 			}
-			if item.issue == "" && item.kind == Image {
-				organised = append(organised, path)
-			}
 			if len(group) > 1 && i == 0 {
 				earliestPath = path
 			}
@@ -69,8 +66,26 @@ func processEntries(source string) []string {
 			writeDuplicateReadme(source, hash, earliestPath)
 		}
 	}
+}
 
-	return organised
+// scannedImages returns paths of Image files found by scan, left in place.
+func scannedImages(source string) []string {
+	root := filepath.Base(source)
+	var paths []string
+	for _, group := range entries {
+		for _, item := range group {
+			if item.kind != Image || item.issue != "" {
+				continue
+			}
+			rel, _ := filepath.Rel(root, folders[item.folder])
+			name := item.name
+			if item.ext != "" {
+				name += "." + item.ext
+			}
+			paths = append(paths, filepath.Join(source, rel, name))
+		}
+	}
+	return paths
 }
 
 // renameViaAI asks whether a filename looks intentional; random names are replaced
@@ -109,7 +124,7 @@ func destPath(source string, item entry, name string) string {
 	return filepath.Join(source, item.year, item.month, name)
 }
 
-// duplicatePath is the mirrored path under _rm_issues/duplicates/<hash>
+// duplicatePath is the mirrored path under _mr_issues/duplicates/<hash>
 func duplicatePath(source, hash, rel, name string) string {
 	return filepath.Join(source, issueFolder, "duplicates", hash, rel, name)
 }
@@ -127,14 +142,28 @@ func parkIssue(source, from, name string, item entry, err error) {
 	check(placeErr)
 }
 
-// parkAIFailure moves a file into _rm_issues/ai-failures by year/month
-func parkAIFailure(path string) {
+// parkAIFailure moves a file into _mr_issues/ai-failures by media year/month
+func parkAIFailure(source, path string) {
 	name := filepath.Base(path)
-	dir := filepath.Dir(path)
-	month := filepath.Base(dir)
-	year := filepath.Base(filepath.Dir(dir))
-	source := filepath.Dir(filepath.Dir(dir))
-	to := filepath.Join(source, issueFolder, "ai-failures", year, month, name)
+	ts := mediaTimestamp(path)
+	to := filepath.Join(source, issueFolder, "ai-failures", ts.Format("2006"), ts.Format("01"), name)
 	_, err := placeFile(path, to)
 	check(err)
+}
+
+// mediaTimestamp returns capture time when available, otherwise mtime (UTC epoch if unreadable)
+func mediaTimestamp(path string) time.Time {
+	ext := filepath.Ext(path)
+	if ext != "" {
+		ext = ext[1:]
+	}
+	ts := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	info, err := os.Stat(path)
+	if err == nil {
+		ts = info.ModTime()
+	}
+	if t, ok := imageCaptureTime(path, ext); ok {
+		ts = t
+	}
+	return ts
 }
