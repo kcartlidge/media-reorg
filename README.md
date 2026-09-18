@@ -71,6 +71,8 @@ The `url` must be for an Open AI compatible api and the `model` should be suppor
 
 Install LM Studio (or Ollama etc) then use it to download the *Gemma 4 E4B* model and run it locally.  It *doesn't* need a graphics card to run, though will obviously be faster with one.  Other models may work fine, but Gemma 4 E4B is small, reliable, fast (vs others on the same hardware), accepts images, and also runs okay on a CPU-only machine.  LM Studio will tell you the API endpoint and exact model name.
 
+The optional `--add-date-prefix` behaves the same as for `rearrange`.
+
 ## Process
 
 - Drop all your media into a single folder (nested how you want, if at all)

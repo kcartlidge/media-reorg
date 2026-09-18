@@ -54,13 +54,16 @@ func main() {
 	case "rearrange":
 		fmt.Println()
 		fmt.Println("Organising.")
-		processEntries(opts.Folder)
+		processEntries(opts.Folder, opts.AddDatePrefix)
 
 		fmt.Println()
 		fmt.Println("Cleaning up.")
 		clearup(opts.Folder)
 
 	case "rename":
+		if opts.AddDatePrefix {
+			applyDatePrefixes(opts.Folder)
+		}
 		images := scannedImages(opts.Folder)
 		fmt.Println()
 		total := len(images)

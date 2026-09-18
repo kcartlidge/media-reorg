@@ -64,9 +64,9 @@ func slugifyWith(msg string, sep byte) string {
 	return strings.Trim(b.String(), string(sep))
 }
 
-// splitDatePrefix detects a leading YYYY-MM-DD- filename prefix
+// splitDatePrefix detects a leading "YYYY-MM-DD " filename prefix
 func splitDatePrefix(name string) (prefix, rest string, ok bool) {
-	if len(name) < 11 || name[4] != '-' || name[7] != '-' || name[10] != '-' {
+	if len(name) < 11 || name[4] != '-' || name[7] != '-' || name[10] != ' ' {
 		return "", name, false
 	}
 	for _, i := range []int{0, 1, 2, 3, 5, 6, 8, 9} {
@@ -80,10 +80,10 @@ func splitDatePrefix(name string) (prefix, rest string, ok bool) {
 	return name[:11], name[11:], true
 }
 
-// withDatePrefix ensures name starts with YYYY-MM-DD- for ts.
+// withDatePrefix ensures name starts with "YYYY-MM-DD " for ts.
 // An existing same-format prefix is kept when already correct, otherwise replaced.
 func withDatePrefix(name string, ts time.Time) string {
-	want := ts.Format("2006-01-02") + "-"
+	want := ts.Format("2006-01-02") + " "
 	if prefix, rest, ok := splitDatePrefix(name); ok {
 		if prefix == want {
 			return name

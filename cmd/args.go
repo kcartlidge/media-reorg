@@ -11,18 +11,19 @@ import (
 
 // options holds the parsed CLI settings.
 type options struct {
-	Action string
-	Folder string
-	URL    string
-	Model  string
-	APIKey string
+	Action        string
+	Folder        string
+	URL           string
+	Model         string
+	APIKey        string
+	AddDatePrefix bool
 }
 
 // parseArgs prints usage and returns validated options from named flags.
 func parseArgs() options {
 	fmt.Println("Usage:")
-	fmt.Println("  media-reorg -action rearrange -folder <folder>")
-	fmt.Println("  media-reorg -action rename -folder <folder> -api <url> -model <model> -api-key <api-key>")
+	fmt.Println("  media-reorg -action rearrange [--add-date-prefix] -folder <folder>")
+	fmt.Println("  media-reorg -action rename [--add-date-prefix] -folder <folder> -api <url> -model <model> -api-key <api-key>")
 
 	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
@@ -33,6 +34,7 @@ func parseArgs() options {
 	api := fs.String("api", "", "")
 	model := fs.String("model", "", "")
 	apiKey := fs.String("api-key", "", "")
+	addDatePrefix := fs.Bool("add-date-prefix", false, "")
 
 	check(fs.Parse(os.Args[1:]))
 	if fs.NArg() > 0 {
@@ -40,11 +42,12 @@ func parseArgs() options {
 	}
 
 	opts := options{
-		Action: strings.TrimSpace(*action),
-		Folder: strings.TrimSpace(*folder),
-		URL:    strings.TrimSpace(*api),
-		Model:  strings.TrimSpace(*model),
-		APIKey: strings.TrimSpace(*apiKey),
+		Action:        strings.TrimSpace(*action),
+		Folder:        strings.TrimSpace(*folder),
+		URL:           strings.TrimSpace(*api),
+		Model:         strings.TrimSpace(*model),
+		APIKey:        strings.TrimSpace(*apiKey),
+		AddDatePrefix: *addDatePrefix,
 	}
 
 	if opts.Action != "rearrange" && opts.Action != "rename" {

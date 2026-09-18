@@ -10,7 +10,7 @@ import (
 )
 
 // processEntries moves scanned files into year/month folders.
-func processEntries(source string) {
+func processEntries(source string, addDatePrefix bool) {
 
 	// source folder name prefix used in the folders map
 	root := filepath.Base(source)
@@ -34,7 +34,10 @@ func processEntries(source string) {
 				origName += "." + item.ext
 			}
 			from := filepath.Join(source, rel, origName)
-			name := withDatePrefix(origName, item.timestamp)
+			name := origName
+			if addDatePrefix {
+				name = withDatePrefix(origName, item.timestamp)
+			}
 
 			// duplicate groups: mirror under _mr_issues/duplicates/<hash>
 			if len(group) > 1 {
@@ -64,6 +67,37 @@ func processEntries(source string) {
 
 		if len(group) > 1 && earliestPath != "" {
 			writeDuplicateReadme(source, hash, earliestPath)
+		}
+	}
+}
+
+// applyDatePrefixes renames Image and Movie files in place to use a correct date prefix.
+// Entry names are updated so later passes see the new paths.
+func applyDatePrefixes(source string) {
+	root := filepath.Base(source)
+	for hash, group := range entries {
+		for i, item := range group {
+			if (item.kind != Image && item.kind != Movie) || item.issue != "" {
+				continue
+			}
+			rel, _ := filepath.Rel(root, folders[item.folder])
+			origName := item.name
+			if item.ext != "" {
+				origName += "." + item.ext
+			}
+			newName := withDatePrefix(origName, item.timestamp)
+			if newName == origName {
+				continue
+			}
+			from := filepath.Join(source, rel, origName)
+			to := filepath.Join(source, rel, newName)
+			placed, err := placeFile(from, to)
+			check(err)
+			base := filepath.Base(placed)
+			if item.ext != "" {
+				base = strings.TrimSuffix(base, "."+item.ext)
+			}
+			entries[hash][i].name = base
 		}
 	}
 }
