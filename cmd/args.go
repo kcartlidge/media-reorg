@@ -1,68 +1,79 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-// sourceFolder returns the path to the source folder
-func sourceFolder() string {
+// options holds the parsed CLI settings for the current combined run.
+type options struct {
+	Folder string
+	URL    string
+	Model  string
+	APIKey string
+	UseLLM bool
+}
 
-	// require folder, optionally url+model[+api-key]
-	n := len(os.Args)
-	if n != 2 && n != 4 && n != 5 {
-		check(fmt.Errorf("expected <folder> [<url> <model> [<api-key>]]"))
+// parseArgs prints usage and returns validated options from named flags.
+func parseArgs() options {
+	fmt.Println("Usage:")
+	fmt.Println("  media-reorg -folder <folder> [-api <url> -model <model> [-api-key <api-key>]]")
+
+	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	fs.Usage = func() {}
+
+	folder := fs.String("folder", "", "")
+	api := fs.String("api", "", "")
+	model := fs.String("model", "", "")
+	apiKey := fs.String("api-key", "", "")
+
+	check(fs.Parse(os.Args[1:]))
+	if fs.NArg() > 0 {
+		check(fmt.Errorf("unexpected arguments: %s", strings.Join(fs.Args(), " ")))
 	}
 
-	// resolve to an absolute path
-	path, err := filepath.Abs(os.Args[1])
-	check(err)
+	opts := options{
+		Folder: strings.TrimSpace(*folder),
+		URL:    strings.TrimSpace(*api),
+		Model:  strings.TrimSpace(*model),
+		APIKey: strings.TrimSpace(*apiKey),
+	}
 
-	// ensure it exists and is a folder
+	if opts.Folder == "" {
+		check(fmt.Errorf("expected -folder"))
+	}
+	path, err := filepath.Abs(opts.Folder)
+	check(err)
 	info, err := os.Stat(path)
 	check(err)
 	if !info.IsDir() {
 		check(fmt.Errorf("not a folder: %s", path))
 	}
+	opts.Folder = path
 
-	return path
-}
-
-// llmConfig returns optional OpenAI-compatible API settings from the CLI.
-// ok is false when no LLM args were given.
-func llmConfig() (url, model, apiKey string, ok bool) {
-
-	// no LLM config provided
-	if len(os.Args) < 4 {
-		return "", "", "", false
+	hasAPI := opts.URL != ""
+	hasModel := opts.Model != ""
+	hasKey := opts.APIKey != ""
+	if hasAPI != hasModel {
+		check(fmt.Errorf("expected -api and -model together"))
 	}
-
-	url = strings.TrimSpace(os.Args[2])
-	model = strings.TrimSpace(os.Args[3])
-	if url == "" {
-		check(fmt.Errorf("expected <url>"))
+	if hasKey && !hasAPI {
+		check(fmt.Errorf("expected -api-key only with -api and -model"))
 	}
-	if model == "" {
-		check(fmt.Errorf("expected <model>"))
-	}
-
-	// OpenAI-compatible APIs expect a /v1 base path
-	url = strings.TrimRight(url, "/")
-	if !strings.HasSuffix(url, "/v1") {
-		url += "/v1"
-	}
-
-	// optional API key
-	if len(os.Args) == 5 {
-		apiKey = strings.TrimSpace(os.Args[4])
-		if apiKey == "" {
-			check(fmt.Errorf("expected <api-key>"))
+	if hasAPI {
+		opts.URL = strings.TrimRight(opts.URL, "/")
+		if !strings.HasSuffix(opts.URL, "/v1") {
+			opts.URL += "/v1"
 		}
+		opts.UseLLM = true
 	}
 
-	return url, model, apiKey, true
+	return opts
 }
 
 // obfuscateKey shows the start and end of a key with the middle hidden

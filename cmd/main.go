@@ -10,30 +10,26 @@ func main() {
 	fmt.Println("MEDIA-REORG")
 	fmt.Println("K Cartlidge, 2026")
 	fmt.Println()
-	fmt.Println("Usage:")
-	fmt.Println("  media-reorg <folder> [<url> <model> [<api-key>]]")
 
-	// get the source folder and optional LLM config
-	folder := sourceFolder()
-	url, model, apiKey, useLLM := llmConfig()
+	opts := parseArgs()
 
 	fmt.Println()
-	fmt.Println("Folder:", folder)
-	if useLLM {
+	fmt.Println("Folder:", opts.Folder)
+	if opts.UseLLM {
 		fmt.Println()
 		fmt.Println("Using an Open AI compatible API to rename files:")
-		fmt.Println("     URL =", url)
-		fmt.Println("   Model =", model)
-		if apiKey != "" {
-			fmt.Println(" API Key =", obfuscateKey(apiKey))
+		fmt.Println("     URL =", opts.URL)
+		fmt.Println("   Model =", opts.Model)
+		if opts.APIKey != "" {
+			fmt.Println(" API Key =", obfuscateKey(opts.APIKey))
 		}
 
 		// basic check that the API and model are valid
-		models, err := listModels(url, apiKey)
+		models, err := listModels(opts.URL, opts.APIKey)
 		check(err)
 		found := false
 		for _, id := range models {
-			if id == model {
+			if id == opts.Model {
 				found = true
 				break
 			}
@@ -44,7 +40,7 @@ func main() {
 			for _, id := range models {
 				fmt.Println(" -", id)
 			}
-			check(fmt.Errorf("model not found: %s", model))
+			check(fmt.Errorf("model not found: %s", opts.Model))
 		}
 	}
 
@@ -52,20 +48,20 @@ func main() {
 	fmt.Println()
 	fmt.Println("Scanning.")
 	fmt.Println()
-	scan(folder)
+	scan(opts.Folder)
 
 	// move files into year/month folders
 	fmt.Println()
 	fmt.Println("Organising.")
-	organised := processEntries(folder)
+	organised := processEntries(opts.Folder)
 
 	// remove empty and junk-only folders
 	fmt.Println()
 	fmt.Println("Cleaning up.")
-	clearup(folder)
+	clearup(opts.Folder)
 
 	// optional AI pass over filenames in the main dated folders
-	if useLLM {
+	if opts.UseLLM {
 		fmt.Println()
 		total := len(organised)
 		fmt.Println("Image files:", total)
@@ -76,7 +72,7 @@ func main() {
 		earlyIdx := 0
 		nextHundred := 100
 		for i, path := range organised {
-			did, err := renameViaAI(url, model, apiKey, path)
+			did, err := renameViaAI(opts.URL, opts.Model, opts.APIKey, path)
 			if err != nil {
 				if isChatFailure(err) && !isFatalChat(err) {
 					failures++
